@@ -19,6 +19,14 @@ window.setCompressionQuality = function(quality) {
 }
 
 
+window.handleDopOnAppIcon = function(args) {
+    let files = []
+    for(let i=1; i<args.length; i++) {
+        let stat = fs.statSync(args[i])
+        files.push(stat)
+    }
+    window.handleDrop(files)
+}
 window.handleDrop = function(files){
 	for (let f of files) {
 		let el = addFile(f);

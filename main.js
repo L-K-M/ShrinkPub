@@ -21,6 +21,11 @@ function createWindow () {
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools()
+    
+    // You can get the dragged file's path like this
+    if (process.argv.length >= 2) {
+        mainWindow.handleDopOnAppIcon(process.argv)
+    }
 }
 
 // This method will be called when Electron has finished
@@ -48,13 +53,3 @@ app.on('window-all-closed', function () {
 // code. You can also put them in separate files and require them here.
 
 
-// You can get the dragged file's path like this
-if (process.argv.length >= 2) {
-    const filePath = process.argv[1]
-    let files = []
-    for(let i=1; i<process.argv.length; i++) {
-        let stat = fs.statSync(process.argv[i])
-        files.push(stat)
-    }
-    window.handleDrop(files)
-}
