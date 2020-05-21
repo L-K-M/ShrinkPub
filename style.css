@@ -1,0 +1,75 @@
+body {
+	margin:0;
+	padding:0;
+	background-color:white;
+	
+	display:flex;
+	flex-direction:column;
+	align-items:stretch;
+	align-content:stretch;
+	
+	font-family: Helvetica, Arial, sans-serif;
+	overflow:hidden;
+}
+#dropzone {
+	text-align: center;
+}
+#dragHere {
+	font-size:20px;
+	padding:20px;
+	margin:20px;
+	color:#495354;
+	
+	display:flex;
+	align-items:center;
+	justify-content:center;
+}
+#dragHere img {
+	width:50px;
+}
+
+#filelist {
+	overflow:scroll-y;
+	border-bottom:2px solid black;
+}
+.hover {
+	cursor:move;
+	background-color:#DDFDFF;
+}
+#settings {
+	padding:10px;
+	flex-basis:100px;
+}
+
+.epubFile {
+	text-align:left;
+	padding:2%;
+	padding-bottom:2px;
+	padding-top:2px;
+	width:96%;
+	
+	display:flex;
+}
+.epubFile .icon {
+	width:32px;
+	height:32px;
+	float:left;
+	margin-right:5px;
+}
+.epubFile .texts {
+	width:200px;
+}
+.epubFile .fileName {
+	width:100%;
+	font-weight:bold;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.epubFile .metaInfo {
+	width:100%;
+	font-size:12px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
