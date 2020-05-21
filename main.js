@@ -2,6 +2,8 @@
 const {app, BrowserWindow} = require('electron')
 const path = require('path')
 
+
+
 function createWindow () {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -45,3 +47,14 @@ app.on('window-all-closed', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
+
+// You can get the dragged file's path like this
+if (process.argv.length >= 2) {
+    const filePath = process.argv[1]
+    let files = []
+    for(let i=1; i<process.argv.length; i++) {
+        let stat = fs.statSync(process.argv[i])
+        files.push(stat)
+    }
+    window.handleDrop(files)
+}
