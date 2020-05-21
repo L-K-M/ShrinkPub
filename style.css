@@ -24,6 +24,7 @@ body {
 }
 
 #filelist {
+    padding-bottom:20px;
 }
 .hover {
 	cursor:move;
