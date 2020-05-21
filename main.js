@@ -36,9 +36,10 @@ app.whenReady().then(() => {
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {
-  // On macOS it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') app.quit()
+    // On macOS it is common for applications and their menu bar
+    // to stay active until the user quits explicitly with Cmd + Q
+    //if (process.platform !== 'darwin') app.quit()
+    app.quit()
 })
 
 // In this file you can include the rest of your app's specific main process
