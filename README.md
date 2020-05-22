@@ -9,5 +9,8 @@ cd ShrinkPub
 npm install
 # Run the app
 npm start
+# Use the app
+Drag your .epub files into the application window. The original .epub file will not be changed, a new shrunk .epub file will be created.
+
 
 ![screenshot](screenshot.png)
