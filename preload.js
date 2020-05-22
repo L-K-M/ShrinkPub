@@ -38,6 +38,8 @@ window.handleDrop = function(files){
 	}
 }
 function fail(error, el) {
+	el.title = error;
+	
 	let icon = el.querySelector(".icon");
 	icon.src = "./img/fail.png";
 
@@ -45,6 +47,8 @@ function fail(error, el) {
 	metaInfo.textContent = error;
 }
 function succeed(message, el) {
+	el.title = message;
+
 	let icon = el.querySelector(".icon");
 	icon.src = "./img/success.png";
 
@@ -52,13 +56,17 @@ function succeed(message, el) {
 	metaInfo.textContent = message;
 }
 function log(text, el) {
+	el.title = text;
+
 	let metaInfo = el.querySelector(".metaInfo");
 	metaInfo.textContent = text;
 }
 
 function addFile(f) {
 	let div = document.createElement("div");
+	if(domElements.filelist.children.length % 2) div.classList.add("zebra");
 	div.classList.add("epubFile");
+	
 	{
 		let icon = document.createElement("img");
 		icon.classList.add("icon");
@@ -81,6 +89,7 @@ function addFile(f) {
 		div.appendChild(texts);
 	}
 	domElements.filelist.appendChild(div);
+	window.scrollTo(0,document.body.scrollHeight);
 	return div;
 }
 

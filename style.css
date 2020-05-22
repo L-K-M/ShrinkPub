@@ -1,7 +1,9 @@
+html, body {
+	min-height: 100%;
+}
 body {
 	margin:0;
 	padding:0;
-	background-color:white;
 	
 	font-family: Helvetica, Arial, sans-serif;
 	overflow:scroll-y;
@@ -24,7 +26,7 @@ body {
 }
 
 #filelist {
-    padding-bottom:20px;
+    padding-bottom:50px;
 }
 .hover {
 	cursor:move;
@@ -47,19 +49,23 @@ body {
 	text-align:left;
 	padding:2%;
 	padding-bottom:2px;
-	padding-top:2px;
+	padding-top:4px;
 	width:96%;
 	
 	display:flex;
 }
+.epubFile.zebra {
+	background-color:#eee;
+}
 .epubFile .icon {
 	width:32px;
 	height:32px;
-	float:left;
 	margin-right:5px;
 }
 .epubFile .texts {
-	width:200px;
+	flex:1;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 .epubFile .fileName {
 	width:100%;

@@ -14,7 +14,7 @@
 		window.setCompressionQuality(quality);
 	}
 	
-	let dropzone = document.getElementById('filelist');
+	let dropzone = document.getElementById('fullPage');
 	dropzone.ondragover = () => {
 		if(dropzone.classList.contains("hover")) return false;
 		dropzone.classList.add("hover");
