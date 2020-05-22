@@ -9,3 +9,5 @@ cd ShrinkPub
 npm install
 # Run the app
 npm start
+
+![screenshot](screenshot.png)
