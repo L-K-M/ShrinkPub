@@ -24,7 +24,7 @@ function createWindow () {
     
     // You can get the dragged file's path like this
     if (process.argv.length >= 2) {
-        mainWindow.handleDopOnAppIcon(process.argv)
+        mainWindow.handleDropOnAppIcon(process.argv)
     }
 }
 

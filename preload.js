@@ -19,7 +19,7 @@ window.setCompressionQuality = function(quality) {
 }
 
 
-window.handleDopOnAppIcon = function(args) {
+window.handleDropOnAppIcon = function(args) {
     let files = []
     for(let i=1; i<args.length; i++) {
         let stat = fs.statSync(args[i])
