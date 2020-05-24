@@ -9,12 +9,6 @@ const util = require('util');
 const compressing = require('compressing');
 const imageminJpegRecompress = require('imagemin-jpeg-recompress');
 
-var compressionQuality = "medium";
-window.setCompressionQuality = function(quality) {
-	compressionQuality = quality;
-}
-
-
 window.handleDropOnAppIcon = function(args) {
     let files = []
     for(let i=1; i<args.length; i++) {
@@ -25,6 +19,13 @@ window.handleDropOnAppIcon = function(args) {
 			'file': stat
 		});
     }
+}
+
+/**** IPC methods ****/
+
+var compressionQuality = "medium";
+window.setCompressionQuality = function(quality) {
+	compressionQuality = quality;
 }
 window.handleDrop = function(f){
 	if(f.file.type == "application/epub+zip") {
@@ -43,6 +44,7 @@ function log(message, f) {
 	window.log("log", message, f);
 }
 
+/**** Recompression Logi ****/
 
 function startFile(f) {
 	decompress(f, function(path) {
