@@ -9,10 +9,6 @@ const util = require('util');
 const compressing = require('compressing');
 const imageminJpegRecompress = require('imagemin-jpeg-recompress');
 
-var domElements = {};
-window.setElements = function(filelist) {
-	domElements.filelist = filelist;
-}
 var compressionQuality = "medium";
 window.setCompressionQuality = function(quality) {
 	compressionQuality = quality;
@@ -22,89 +18,40 @@ window.setCompressionQuality = function(quality) {
 window.handleDropOnAppIcon = function(args) {
     let files = []
     for(let i=1; i<args.length; i++) {
-        let stat = fs.statSync(args[i])
-        files.push(stat)
+        let stat = fs.statSync(args[i]);
+    	window.handleDrop(stat);
     }
-    window.handleDrop(files)
 }
-window.handleDrop = function(files){
-	for (let f of files) {
-		let el = addFile(f);
-		if(f.type == "application/epub+zip") {
-			startFile(f, el);
-		} else {
-			fail("I'm no Epub yet!", el);
-		}
+window.handleDrop = function(f){
+	if(f.file.type == "application/epub+zip") {
+		startFile(f);
+	} else {
+		fail("I'm no Epub yet!", f);
 	}
 }
-function fail(error, el) {
-	el.title = error;
-	
-	let icon = el.querySelector(".icon");
-	icon.src = "./img/fail.png";
-
-	let metaInfo = el.querySelector(".metaInfo");
-	metaInfo.textContent = error;
+function fail(message, f) {
+	window.log("error", message, f);
 }
-function succeed(message, el) {
-	el.title = message;
-
-	let icon = el.querySelector(".icon");
-	icon.src = "./img/success.png";
-
-	let metaInfo = el.querySelector(".metaInfo");
-	metaInfo.textContent = message;
+function succeed(message, f) {
+	window.log("success", message, f);
 }
-function log(text, el) {
-	el.title = text;
-
-	let metaInfo = el.querySelector(".metaInfo");
-	metaInfo.textContent = text;
+function log(message, f) {
+	window.log("log", message, f);
 }
 
-function addFile(f) {
-	let div = document.createElement("div");
-	if(domElements.filelist.children.length % 2) div.classList.add("zebra");
-	div.classList.add("epubFile");
-	
-	{
-		let icon = document.createElement("img");
-		icon.classList.add("icon");
-		icon.src = "./img/spinner.svg";
-		div.appendChild(icon);
-		
-		let texts = document.createElement("div");
-		texts.classList.add("texts");
-		{
-			let fileName = document.createElement("div");
-			fileName.classList.add("fileName");
-			fileName.textContent = f.name;
-			texts.appendChild(fileName);
-	
-			let metaInfo = document.createElement("div");
-			metaInfo.classList.add("metaInfo");
-			metaInfo.textContent = f.size;
-			texts.appendChild(metaInfo);
-		}
-		div.appendChild(texts);
-	}
-	domElements.filelist.appendChild(div);
-	window.scrollTo(0,document.body.scrollHeight);
-	return div;
-}
 
-function startFile(f, el) {
-	decompress(f, el, function(path) {
-		crunchImages(path, el, function() {
-			createEpub(f.path, path, el, function(newFilePath) {
-				let oldSize = f.size;
+function startFile(f) {
+	decompress(f, function(path) {
+		crunchImages(path, f, function() {
+			createEpub(f, path, function(newFilePath) {
+				let oldSize = f.file.size;
 				let newSize = fs.statSync(newFilePath).size;
 				let info = "Original size: "+
 					(parseInt(oldSize / 1000.0)/1000)+
 					"Mb, new size: "+
 					(parseInt(newSize / 1000.0)/1000)+
 					"Mb, stored at "+newFilePath
-				succeed(info, el);
+				succeed(info, f);
 			})
 		})
 	});
@@ -112,29 +59,29 @@ function startFile(f, el) {
 
 /**** Unzipping ****/
 
-function decompress(f, el, callback) {
-	let unzipper = new DecompressZip(f.path);
-	let unzipped_path = f.path + '_unzipped';
+function decompress(f, callback) {
+	let unzipper = new DecompressZip(f.file.path);
+	let unzipped_path = f.file.path + '_unzipped';
 	let counter = 1;
 	while(fs.existsSync(unzipped_path)) {
-		unzipped_path = f.path + '_unzipped_'+counter;
+		unzipped_path = f.file.path + '_unzipped_'+counter;
 		counter++;
 	}
 	
 	// Add the error event listener
 	unzipper.on('error', function (err) {
-		fail("Error during unzipping: "+err, el);
+		fail("Error during unzipping: "+err, f);
 	});
 
 	// Notify when everything is extracted
 	unzipper.on('extract', function () {
-		log('Finished unzipping', el);
+		log('Finished unzipping', f);
 		callback(unzipped_path);
 	});
 
 	// Notify "progress" of the decompressed files
 	unzipper.on('progress', function (fileIndex, fileCount) {
-		log('Extracted file ' + (fileIndex + 1) + ' of ' + fileCount, el);
+		log('Extracted file ' + (fileIndex + 1) + ' of ' + fileCount, f);
 	});
 
 	unzipper.extract({
@@ -144,7 +91,7 @@ function decompress(f, el, callback) {
 
 /**** Crunching Images ****/
 
-function crunchImages(unzipped_path, el, callback) {
+function crunchImages(unzipped_path, f, callback) {
 	function iterablePromise(iterable) {
 	  return Promise.all(iterable).then(function(resolvedIterable) {
 		if (iterable.length != resolvedIterable.length) {
@@ -159,10 +106,10 @@ function crunchImages(unzipped_path, el, callback) {
 	}
 	
 	let promises = [];
-	promises.push(recursiveCompression(unzipped_path, promises, el));
+	promises.push(recursiveCompression(unzipped_path, promises, f));
 	iterablePromise(promises).then(callback);
 }
-async function recursiveCompression(path, promises, el) {
+async function recursiveCompression(path, promises, f) {
 	const readdir = util.promisify(fs.readdir);
 	
     let items = await readdir(path);
@@ -171,10 +118,10 @@ async function recursiveCompression(path, promises, el) {
 		
 		let stats = fs.lstatSync(newFilePath);
 		if(stats.isDirectory()) {
-			await recursiveCompression(newFilePath, promises, el);
+			await recursiveCompression(newFilePath, promises, f);
 		} else if(stats.isFile()) {
 			if(newFilePath.endsWith(".png") || newFilePath.endsWith(".jpg") || newFilePath.endsWith(".jpeg")) {
-				log("Compressing "+newFilePath, el);
+				log("Compressing "+newFilePath, f);
 				try {
 					await imagemin([newFilePath], {
 						destination: path,
@@ -199,14 +146,14 @@ async function recursiveCompression(path, promises, el) {
 
 /**** Rezipping ****/
 
-function createEpub(epubName, unzipped_path, el, callback) {
-	let new_file_name = epubName + '_compressed.epub';
+function createEpub(f, unzipped_path, callback) {
+	let new_file_name = f.file.name + '_compressed.epub';
 	let counter = 1;
 	while(fs.existsSync(new_file_name)) {
-		new_file_name = epubName + '_compressed'+counter+".epub";
+		new_file_name = f.file.name + '_compressed'+counter+".epub";
 		counter++;
 	}
-	log("Creating new Epub file at "+epubName, el);
+	log("Creating new Epub file at "+new_file_name, f);
 	
 	const zipStream = new compressing.zip.Stream();
 	fs.readdir(unzipped_path, (err, files) => { 
@@ -215,8 +162,8 @@ function createEpub(epubName, unzipped_path, el, callback) {
 		}) 
 	});
 	zipStream
-	  .on('error', function(e){fail("Error while creating epub: "+e, el)})
+	  .on('error', function(e){fail("Error while creating epub: "+e, f)})
 	  .pipe(fs.createWriteStream(new_file_name))
-	  .on('error', function(e){fail("Error while creating epub: "+e, el)})
+	  .on('error', function(e){fail("Error while creating epub: "+e, f)})
 	  .on('finish', function(){callback(new_file_name)})
 }
