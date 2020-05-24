@@ -33,7 +33,7 @@
 		dragHere.style.display = 'none';
 		
 		for (let file of e.dataTransfer.files) {
-			let id = addFile(file);
+			let id = window.addFile(file);
 			window.handleDrop({
 				'id': id,
 				'file': file
@@ -61,7 +61,7 @@
 	}
 
 	let idCounter = 0;
-	function addFile(file) {
+	window.addFile = function(file) {
 		let filelist = document.getElementById('filelist');
 		let div = document.createElement("div");
 		

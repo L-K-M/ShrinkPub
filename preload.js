@@ -19,7 +19,11 @@ window.handleDropOnAppIcon = function(args) {
     let files = []
     for(let i=1; i<args.length; i++) {
         let stat = fs.statSync(args[i]);
-    	window.handleDrop(stat);
+		let id = window.addFile(stat);
+		window.handleDrop({
+			'id': id,
+			'file': stat
+		});
     }
 }
 window.handleDrop = function(f){
