@@ -151,10 +151,10 @@ async function recursiveCompression(path, promises, f) {
 /**** Rezipping ****/
 
 function createEpub(f, unzipped_path, callback) {
-	let new_file_name = f.file.name + '_compressed.epub';
+	let new_file_name = f.file.path + '_compressed.epub';
 	let counter = 1;
 	while(fs.existsSync(new_file_name)) {
-		new_file_name = f.file.name + '_compressed'+counter+".epub";
+		new_file_name = f.file.path + '_compressed'+counter+".epub";
 		counter++;
 	}
 	log("Creating new Epub file at "+new_file_name, f);
