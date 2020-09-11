@@ -8,6 +8,15 @@ const imageminPngquant = require('imagemin-pngquant');
 const util = require('util');
 const compressing = require('compressing');
 const imageminJpegRecompress = require('imagemin-jpeg-recompress');
+const imageminMozjpeg = require('imagemin-mozjpeg');
+const pathUtils = require('path');
+
+
+
+var _setImmediate = setImmediate;
+process.once('loaded', function() {
+  global.setImmediate = _setImmediate;
+});
 
 window.handleDropOnAppIcon = function(args) {
     let files = []
@@ -73,7 +82,7 @@ function decompress(f, callback) {
 		unzipped_path = f.file.path + '_unzipped_'+counter;
 		counter++;
 	}
-	
+
 	// Add the error event listener
 	unzipper.on('error', function (err) {
 		fail("Error during unzipping: "+err, f);
@@ -110,18 +119,19 @@ function crunchImages(unzipped_path, f, callback) {
 		return resolvedIterable;
 	  });
 	}
-	
+
 	let promises = [];
 	promises.push(recursiveCompression(unzipped_path, promises, f));
 	iterablePromise(promises).then(callback);
 }
 async function recursiveCompression(path, promises, f) {
 	const readdir = util.promisify(fs.readdir);
-	
+
     let items = await readdir(path);
 	for (var i=0; i<items.length; i++) {
-		let newFilePath = path+"/"+items[i];
-		
+		let newFilePath = pathUtils.join(path, items[i]);
+    //console.log(newFilePath);
+
 		let stats = fs.lstatSync(newFilePath);
 		if(stats.isDirectory()) {
 			await recursiveCompression(newFilePath, promises, f);
@@ -129,19 +139,35 @@ async function recursiveCompression(path, promises, f) {
 			if(newFilePath.endsWith(".png") || newFilePath.endsWith(".jpg") || newFilePath.endsWith(".jpeg")) {
 				log("Compressing "+newFilePath, f);
 				try {
+          let preSize = fs.statSync(newFilePath).size;
+          //console.log(preSize);
 					await imagemin([newFilePath], {
 						destination: path,
 						plugins: [
 							imageminJpegRecompress({
 								accurate:true,
-								quality:compressionQuality
+                                quality:compressionQuality,
+                                strip:true
 							}),
 							imageminPngquant({
 								quality: [0.5, 0.8]
 							})
 						]
 					});
+                    //console.log(fs.statSync(newFilePath).size);
+                    if(preSize - fs.statSync(newFilePath).size < 100) {
+                        // try again
+                        //console.log("try again")
+                        await imagemin([newFilePath], path, {
+                            use: [
+                                imageminMozjpeg({quality: 50})
+                            ]
+                        });
+                        //console.log(fs.statSync(newFilePath).size);
+                    }
 				} catch(e) {
+            //console.log(e);
+				    log("Error compressing "+newFilePath, f);
 					// Some images may be broken and can't be compressed
 					// This shouldn't stop the whole process, just ignore those
 				}
@@ -160,12 +186,12 @@ function createEpub(f, unzipped_path, callback) {
 		counter++;
 	}
 	log("Creating new Epub file at "+new_file_name, f);
-	
+
 	const zipStream = new compressing.zip.Stream();
-	fs.readdir(unzipped_path, (err, files) => { 
-		files.forEach(file => { 
-			zipStream.addEntry(unzipped_path+"/"+file);
-		}) 
+	fs.readdir(unzipped_path, (err, files) => {
+		files.forEach(file => {
+			zipStream.addEntry(pathUtils.join(unzipped_path, file));
+		})
 	});
 	zipStream
 	  .on('error', function(e){fail("Error while creating epub: "+e, f)})
