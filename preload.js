@@ -55,6 +55,10 @@ function log(message, f) {
 
 /**** Recompression Logi ****/
 
+function debuglog(txt) {
+//  console.log(txt);
+}
+
 function startFile(f) {
 	decompress(f, function(path) {
 		crunchImages(path, f, function() {
@@ -130,17 +134,17 @@ async function recursiveCompression(path, promises, f) {
     let items = await readdir(path);
 	for (var i=0; i<items.length; i++) {
 		let newFilePath = pathUtils.join(path, items[i]);
-    //console.log(newFilePath);
+    debuglog(newFilePath);
 
 		let stats = fs.lstatSync(newFilePath);
 		if(stats.isDirectory()) {
 			await recursiveCompression(newFilePath, promises, f);
 		} else if(stats.isFile()) {
 			if(newFilePath.endsWith(".png") || newFilePath.endsWith(".jpg") || newFilePath.endsWith(".jpeg")) {
-				log("Compressing "+newFilePath, f);
+				debuglog("============ Compressing "+newFilePath, f);
 				try {
           let preSize = fs.statSync(newFilePath).size;
-          //console.log(preSize);
+          debuglog("presize: "+preSize);
 					await imagemin([newFilePath], {
 						destination: path,
 						plugins: [
@@ -150,23 +154,24 @@ async function recursiveCompression(path, promises, f) {
                                 strip:true
 							}),
 							imageminPngquant({
-								quality: [0.5, 0.8]
+								quality: [0.2, 0.4],
+                speed: 1
 							})
 						]
 					});
-                    //console.log(fs.statSync(newFilePath).size);
+                    debuglog("postsize: "+fs.statSync(newFilePath).size);
                     if(preSize - fs.statSync(newFilePath).size < 100) {
                         // try again
-                        //console.log("try again")
+                        debuglog("try again")
                         await imagemin([newFilePath], path, {
                             use: [
                                 imageminMozjpeg({quality: 50})
                             ]
                         });
-                        //console.log(fs.statSync(newFilePath).size);
+                        debuglog(fs.statSync(newFilePath).size);
                     }
 				} catch(e) {
-            //console.log(e);
+            debuglog(e);
 				    log("Error compressing "+newFilePath, f);
 					// Some images may be broken and can't be compressed
 					// This shouldn't stop the whole process, just ignore those
