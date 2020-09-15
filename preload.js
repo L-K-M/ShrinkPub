@@ -10,10 +10,11 @@ const compressing = require('compressing');
 const imageminJpegRecompress = require('imagemin-jpeg-recompress');
 const imageminMozjpeg = require('imagemin-mozjpeg');
 const pathUtils = require('path');
-
+const gulp = require('gulp');
+const image = require('gulp-image');
 const execFile = require('child_process').execFile;
 const pngcrushPath = require('pngcrush-bin').path;
-
+const debug = require('gulp-debug');
 
 var _setImmediate = setImmediate;
 process.once('loaded', function() {
@@ -60,6 +61,9 @@ function log(message, f) {
 function debuglog(txt) {
   //console.log(txt);
 }
+function toMb(size) {
+  return (parseInt(size / 1000.0)/1000);
+}
 function startFile(f) {
 	decompress(f, function(path) {
 		crunchImages(path, f, function() {
@@ -67,9 +71,9 @@ function startFile(f) {
 				let oldSize = f.file.size;
 				let newSize = fs.statSync(newFilePath).size;
 				let info = "Original size: "+
-					(parseInt(oldSize / 1000.0)/1000)+
+					toMb(oldSize)+
 					"Mb, new size: "+
-					(parseInt(newSize / 1000.0)/1000)+
+					toMb(newSize)+
 					"Mb, stored at "+newFilePath
 				succeed(info, f);
 			})
@@ -131,54 +135,100 @@ function crunchImages(unzipped_path, f, callback) {
 }
 function crushPNG(filePath) {
   if(!pngcrushPath) return;
-  execFile(pngcrushPath, ['-reduce', '-brute', filePath], function() {
-    succeed('PNG Crushed');
+  execFile(pngcrushPath, ['-reduce', '-brute', filePath], function(result) {
+    debuglog(result);
+    succeed('PNG Crushed', f);
   });
 }
-async function compressPNG(file, path) {
-  let preSize = fs.statSync(file).size;
-  debuglog("presize: "+preSize);
-  await imagemin([file], {
+async function compressPNG(filePath, path, f) {
+  let preSize = fs.statSync(filePath).size;
+
+  // workaround to windows path bug https://github.com/imagemin/imagemin/issues/352
+  filePath = filePath.replace(/\\/g, "/");
+  path = path.replace(/\\/g, "/");
+
+  let q = [0.2, 0.4];
+  if(compressionQuality == 'veryhigh') {
+      q = [0.7, 0.9];
+  } else if(compressionQuality == 'high') {
+    q = [0.5, 0.7];
+  } else if(compressionQuality == 'medium') {
+    q = [0.3, 0.5];
+  } else if(compressionQuality == 'low') {
+    q = [0.1, 0.3];
+  }
+
+
+  var files = await imagemin([filePath], {
     destination: path,
     plugins: [
       imageminPngquant({
-        quality: [0.2, 0.4],
+        quality: q,
         speed: 1
       })
-    ]
-  });
-  debuglog("postsize: "+fs.statSync(file).size);
-  if(preSize - fs.statSync(file).size < 100) {
+    ]});
+  let postSize = fs.statSync(filePath).size;
+  let fileName = filePath.substr(filePath.lastIndexOf("/")+1);
+  log("Compressed "+fileName+" from "+toMb(preSize)+"MB to "+toMb(postSize)+"MB", f);
+  /*
+  if(preSize - fs.statSync(filePath).size < 100) {
       // try again
-      debuglog("try again")
-      crushPNG(file);
-      debuglog(fs.statSync(file).size);
-  }
-}
-async function compressJPG(file, path) {
-  let preSize = fs.statSync(file).size;
-  debuglog("presize: "+preSize);
-  await imagemin([file], {
-    destination: path,
-    plugins: [
-      imageminJpegRecompress({
-        accurate:true,
-        quality:compressionQuality,
-        strip:true
-      })
-    ]
-  });
-  debuglog("postsize: "+fs.statSync(file).size);
-  if(preSize - fs.statSync(file).size < 100) {
-      // try again
-      debuglog("try again")
-      await imagemin([file], path, {
-          use: [
-              imageminMozjpeg({quality: 50})
-          ]
+      gulp.task('image', function () {
+        gulp.src(filePath)
+          .pipe(debug({title:'file', minimal:false, logger: debuglog}))
+          .pipe(image())
+          .pipe(debug({title:'fil2', minimal:false, logger: debuglog}))
+          .pipe(gulp.dest(path))
+          .pipe(debug({title:'file3', minimal:false, logger: debuglog}));
       });
-      debuglog(fs.statSync(file).size);
+
+      if(preSize - fs.statSync(filePath).size < 100) {
+        debuglog("try yet again with crushpng")
+        crushPNG(file);
+      }
+      debuglog(fs.statSync(filePath).size);
   }
+  */
+}
+async function compressJPG(filePath, path, f) {
+  // workaround to windows path bug https://github.com/imagemin/imagemin/issues/352
+  filePath = filePath.replace(/\\/g, "/");
+  path = path.replace(/\\/g, "/");
+
+  let preSize = fs.statSync(filePath).size;
+  try {
+    await imagemin([filePath], {
+      destination: path,
+      plugins: [
+        imageminJpegRecompress({
+          accurate:true,
+          quality:compressionQuality,
+          strip:true
+        })
+      ]
+    });
+  } catch(e) {
+    fail("Can't compress JPG "+e, f);
+  }
+
+  let postSize = fs.statSync(filePath).size;
+  let fileName = filePath.substr(filePath.lastIndexOf("/"));
+  log("Compressed "+fileName+" from "+toMb(preSize)+"MB to "+toMb(postSize)+"MB", f);
+}
+async function compressJPG2(filePath, path, f) {
+  // workaround to windows path bug https://github.com/imagemin/imagemin/issues/352
+  filePath = filePath.replace(/\\/g, "/");
+  path = path.replace(/\\/g, "/");
+
+  let preSize = fs.statSync(filePath).size;
+  await imagemin([filePath], path, {
+      use: [
+          imageminMozjpeg({quality: 50})
+      ]
+  });
+  let postSize = fs.statSync(filePath).size;
+  let fileName = filePath.substr(filePath.lastIndexOf("/"));
+  log("Compressed "+fileName+" from "+toMb(preSize)+"MB to "+toMb(postSize)+"MB", f);
 }
 async function recursiveCompression(path, promises, f) {
 	const readdir = util.promisify(fs.readdir);
@@ -187,19 +237,23 @@ async function recursiveCompression(path, promises, f) {
 	for (var i=0; i<items.length; i++) {
 		let newFilePath = pathUtils.join(path, items[i]);
     debuglog(newFilePath);
+    debuglog(path);
 
 		let stats = fs.lstatSync(newFilePath);
 		if(stats.isDirectory()) {
 			await recursiveCompression(newFilePath, promises, f);
 		} else if(stats.isFile()) {
       try {
-  			if(newFilePath.endsWith(".png")) {
+  			if(newFilePath.toLowerCase().endsWith(".png")) {
           debuglog("============ PNG Compressing "+newFilePath, f);
-          await compressPNG(newFilePath, path);
+          await compressPNG(newFilePath, path, f);
         }
-        if(newFilePath.endsWith(".jpg") || newFilePath.endsWith(".jpeg")) {
+        if(newFilePath.toLowerCase().endsWith(".jpg") || newFilePath.toLowerCase().endsWith(".jpeg")) {
   				debuglog("============ JPG Compressing "+newFilePath, f);
-          await compressJPG(newFilePath, path);
+          let preSize = fs.statSync(newFilePath).size;
+          await compressJPG(newFilePath, path, f);
+          let postSize = fs.statSync(newFilePath).size;
+          if(preSize <= postSize) await compressJPG2(newFilePath, path, f);
         }
 			} catch(e) {
           debuglog(e);

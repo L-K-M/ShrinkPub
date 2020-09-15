@@ -14,7 +14,10 @@
   "license": "MIT",
   "devDependencies": {
     "compress-images": "^1.7.8",
-    "electron": "^9.0.0"
+    "electron": "^9.0.0",
+    "gulp": "^4.0.2",
+    "gulp-debug": "^4.0.0",
+    "gulp-image": "^6.2.1"
   },
   "dependencies": {
     "compressing": "^1.5.1",
