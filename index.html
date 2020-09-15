@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html id="fullPage">
-  <head>
-    <meta charset="UTF-8">
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
-    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
-    <title>ShrinkPub</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-  </head>
-  <body id="dropzone">
-	<div id="filelist">
-		<p id="dragHere"><img src="./img/arrow.png">Bring out your Epubs!</p>
-	</div>
-	<div id="settings">
-		<label for="quality" accesskey="q">Quality</label>
-		<select name="quality" id="qualitySelector">
-			<option value="veryhigh">Very High</option>
-			<option value="high">High</option>
-			<option value="medium" selected>medium</option>
-			<option value="low">low</option>
-		</select>
-	</div>
 
-    <!-- You can also require other files to run in this process -->
-    <script src="./renderer.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+  <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+  <title>ShrinkPub</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body id="dropzone">
+  <div id="filelist">
+    <p id="dragHere"><img src="./img/arrow.png">Bring out your Epubs!</p>
+  </div>
+  <div id="settings">
+    <label for="quality" accesskey="q">Quality</label>
+    <select name="quality" id="qualitySelector">
+      <option value="veryhigh">Very High</option>
+      <option value="high">High</option>
+      <option value="medium" selected>medium</option>
+      <option value="low">low</option>
+    </select>
+  </div>
+
+  <!-- You can also require other files to run in this process -->
+  <script src="./renderer.js"></script>
+</body>
+
 </html>
