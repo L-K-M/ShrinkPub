@@ -162,6 +162,12 @@ async function compressPNG(filePath, path, f) {
     q = [0.3, 0.5];
   } else if (compressionQuality == 'low') {
     q = [0.1, 0.3];
+  } else if (compressionQuality == 'verylow') {
+    q = [0.1, 0.2];
+  } else if (compressionQuality == 'terrible') {
+    q = [0.1, 0.1];
+  } else if (compressionQuality == 'atrocious') {
+    q = [0.01, 0.01];
   }
 
 
@@ -202,16 +208,63 @@ async function compressJPG(filePath, path, f) {
   filePath = filePath.replace(/\\/g, "/");
   path = path.replace(/\\/g, "/");
 
+  let q ={};
+  if (compressionQuality == 'veryhigh') {
+    q = {
+      accurate: true,
+      quality: compressionQuality,
+      strip: true
+    };
+  } else if (compressionQuality == 'high') {
+    q = {
+      accurate: true,
+      quality: compressionQuality,
+      strip: true
+    };
+  } else if (compressionQuality == 'medium') {
+    q = {
+      accurate: true,
+      quality: compressionQuality,
+      strip: true
+    };
+  } else if (compressionQuality == 'low') {
+    q ={
+      accurate: true,
+      quality: compressionQuality,
+      strip: true
+    };
+  } else if (compressionQuality == 'verylow') {
+    q = {
+      accurate: false,
+      target: 0.6,
+      max: 0.7,
+      min: 0.4,
+      strip: true
+    };
+  } else if (compressionQuality == 'terrible') {
+    q = {
+      accurate: false,
+      target: 0.5,
+      max: 0.5,
+      min: 0.3,
+      strip: true
+    };
+  } else if (compressionQuality == 'atrocious') {
+    q = {
+      accurate: false,
+      target: 0.1,
+      max: 0.2,
+      min: 0.1,
+      strip: true
+    };
+  }
+
   let preSize = fs.statSync(filePath).size;
   try {
     await imagemin([filePath], {
       destination: path,
       plugins: [
-        imageminJpegRecompress({
-          accurate: true,
-          quality: compressionQuality,
-          strip: true
-        })
+        imageminJpegRecompress(q)
       ]
     });
   } catch (e) {
