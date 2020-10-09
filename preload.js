@@ -235,26 +235,26 @@ async function compressJPG(filePath, path, f) {
     };
   } else if (compressionQuality == 'verylow') {
     q = {
-      accurate: false,
-      target: 0.6,
-      max: 0.7,
-      min: 0.4,
+      accurate: true,
+      target: 50,
+      max: 55,
+      min: 30,
       strip: true
     };
   } else if (compressionQuality == 'terrible') {
     q = {
-      accurate: false,
-      target: 0.5,
-      max: 0.5,
-      min: 0.3,
+      accurate: true,
+      target: 30,
+      max: 40,
+      min: 20,
       strip: true
     };
   } else if (compressionQuality == 'atrocious') {
     q = {
       accurate: false,
-      target: 0.1,
-      max: 0.2,
-      min: 0.1,
+      target: 10,
+      max: 20,
+      min: 5,
       strip: true
     };
   }
