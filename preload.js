@@ -15,6 +15,8 @@ const image = require('gulp-image');
 const execFile = require('child_process').execFile;
 const pngcrushPath = require('pngcrush-bin').path;
 const debug = require('gulp-debug');
+var nativeImage = require('electron').nativeImage
+
 
 var _setImmediate = setImmediate;
 process.once('loaded', function() {
@@ -213,25 +215,29 @@ async function compressJPG(filePath, path, f) {
     q = {
       accurate: true,
       quality: compressionQuality,
-      strip: true
+      strip: true,
+      resize:false
     };
   } else if (compressionQuality == 'high') {
     q = {
       accurate: true,
       quality: compressionQuality,
-      strip: true
+      strip: true,
+      resize:false
     };
   } else if (compressionQuality == 'medium') {
     q = {
       accurate: true,
       quality: compressionQuality,
-      strip: true
+      strip: true,
+      resize:false
     };
   } else if (compressionQuality == 'low') {
     q ={
       accurate: true,
       quality: compressionQuality,
-      strip: true
+      strip: true,
+      resize:1200
     };
   } else if (compressionQuality == 'verylow') {
     q = {
@@ -239,7 +245,8 @@ async function compressJPG(filePath, path, f) {
       target: 50,
       max: 55,
       min: 30,
-      strip: true
+      strip: true,
+      resize:900
     };
   } else if (compressionQuality == 'terrible') {
     q = {
@@ -247,7 +254,8 @@ async function compressJPG(filePath, path, f) {
       target: 30,
       max: 40,
       min: 20,
-      strip: true
+      strip: true,
+      resize:700
     };
   } else if (compressionQuality == 'atrocious') {
     q = {
@@ -255,11 +263,32 @@ async function compressJPG(filePath, path, f) {
       target: 10,
       max: 20,
       min: 5,
-      strip: true
+      strip: true,
+      resize:500
     };
   }
 
   let preSize = fs.statSync(filePath).size;
+  if(q.resize) {
+    let natImg = nativeImage.createFromPath(filePath);
+    let preSize = natImg.getSize();
+    if(preSize.width > q.resize) {
+      natImg = natImg.resize({width:q.resize});
+    let postSize = natImg.getSize();
+      // save it as a png file
+        console.log(filePath.toLowerCase());
+      if(filePath.toLowerCase().endsWith("png")) {
+        await fs.writeFile(filePath, natImg.toPNG(), (error) => {
+          if (error) throw error;
+        });
+      } else if(filePath.toLowerCase().endsWith("jpg") || filePath.toLowerCase().endsWith("jpeg")) {
+        await fs.writeFile(filePath, natImg.toJPEG(80), (error) => {
+          if (error) throw error;
+        });
+      }
+    }
+  }
+
   try {
     await imagemin([filePath], {
       destination: path,

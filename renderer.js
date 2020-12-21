@@ -86,7 +86,7 @@
 
         let metaInfo = document.createElement("div");
         metaInfo.classList.add("metaInfo");
-        metaInfo.textContent = file.size;
+        metaInfo.textContent = (parseInt(file.size / 1000.0) / 1000)+" Mb";
         texts.appendChild(metaInfo);
       }
       div.appendChild(texts);
