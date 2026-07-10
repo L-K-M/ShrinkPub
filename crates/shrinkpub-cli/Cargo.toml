@@ -1,0 +1,14 @@
+[package]
+name = "shrinkpub-cli"
+description = "Command-line frontend for the ShrinkPub EPUB compressor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "shrinkpub"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+shrinkpub-core = { path = "../shrinkpub-core" }

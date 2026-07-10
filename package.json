@@ -1,31 +1,35 @@
 {
   "name": "shrinkpub",
-  "version": "0.0.1",
-  "description": "An epub compressor",
-  "main": "main.js",
+  "version": "1.0.0",
+  "description": "ShrinkPub Tauri frontend",
+  "type": "module",
   "scripts": {
-    "start": "electron ."
+    "dev": "vite dev",
+    "build": "npm run verify && vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "cargo test --workspace",
+    "verify": "npm run check && npm run test",
+    "prepare": "husky",
+    "tauri": "tauri"
   },
-  "repository": "https://github.com/L-K-M/ShrinkPub",
-  "keywords": [
-    "Epub"
-  ],
-  "author": "L_K_M",
   "license": "MIT",
-  "devDependencies": {
-    "compress-images": "^1.7.8",
-    "electron": "^9.0.0",
-    "gulp": "^4.0.2",
-    "gulp-debug": "^4.0.0",
-    "gulp-image": "^6.2.1"
-  },
   "dependencies": {
-    "compressing": "^1.5.1",
-    "decompress-zip": "^0.2.2",
-    "imagemin": "^7.0.1",
-    "imagemin-jpeg-recompress": "^6.0.0",
-    "imagemin-jpegtran": "^6.0.0",
-    "imagemin-mozjpeg": "^9.0.0",
-    "imagemin-pngquant": "^8.0.0"
+    "@lkmc/system7-ui": "^0.2.1",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.6",
+    "@sveltejs/kit": "^2.9.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tauri-apps/cli": "^2",
+    "husky": "^9.1.7",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3"
   }
 }

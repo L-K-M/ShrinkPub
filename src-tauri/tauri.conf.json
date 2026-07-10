@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ShrinkPub",
+  "version": "1.0.0",
+  "identifier": "ch.lkmc.shrinkpub",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ShrinkPub",
+        "width": 700,
+        "height": 560,
+        "minWidth": 540,
+        "minHeight": 420,
+        "decorations": false,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost ws://localhost:1421 http://localhost:1420; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
