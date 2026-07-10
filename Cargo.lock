@@ -3525,7 +3525,7 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "shrinkpub-cli"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "clap",
  "shrinkpub-core",
@@ -3533,7 +3533,7 @@ dependencies = [
 
 [[package]]
 name = "shrinkpub-core"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "image",
  "imagequant",
@@ -3545,7 +3545,7 @@ dependencies = [
 
 [[package]]
 name = "shrinkpub-tauri"
-version = "1.0.0"
+version = "2.0.0"
 dependencies = [
  "objc2-app-kit",
  "open",
