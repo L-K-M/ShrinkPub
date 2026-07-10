@@ -6,7 +6,7 @@ into the window, pick a quality tier, and each one gets a recompressed
 replaced when the recompressed version is actually smaller, and nothing is ever
 left behind on disk — the whole book is repacked in memory.
 
-**Latest release:** v<!-- version -->1.0.0<!-- /version --> · [Download](https://github.com/L-K-M/ShrinkPub/releases/latest)
+**Latest release:** v<!-- version -->2.0.0<!-- /version --> · [Download](https://github.com/L-K-M/ShrinkPub/releases/latest)
 
 ![Screenshot of ShrinkPub showing dropped EPUB files with their compression results and the quality selector](./media-sources/screenshot.png)
 
