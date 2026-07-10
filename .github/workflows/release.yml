@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']        # e.g. v1.2.3
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write       # needed to create the GitHub Release
+
+jobs:
+  release:
+    name: Build & publish (unsigned)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No lockfile is committed, so use `npm install`. @electron/packager
+      # reads the Electron version to bundle from the project's devDependencies
+      # (electron ^9.0.0), so a normal install is enough — no extra config file
+      # is added to the repo.
+      - name: Install dependencies
+        run: npm install
+
+      # Build a universal (Intel + Apple Silicon) macOS .app with no project
+      # config files. App name "ShrinkPub", output into dist/.
+      - name: Package macOS app (@electron/packager)
+        run: npx --yes @electron/packager . ShrinkPub --platform=darwin --arch=universal --out=dist --overwrite
+
+      # Ad-hoc sign (identity "-"): no certificate, keychain, or API key is
+      # required, but it IS required for the app to launch on Apple Silicon.
+      # This is not a Developer ID signature and the app is not notarized —
+      # Gatekeeper still warns on first launch.
+      - name: Ad-hoc codesign the app
+        run: codesign --force --deep --sign - dist/ShrinkPub-darwin-universal/ShrinkPub.app
+
+      - name: Package zip
+        run: |
+          ZIP="ShrinkPub-${GITHUB_REF_NAME}-darwin-universal.zip"
+          ditto -c -k --keepParent dist/ShrinkPub-darwin-universal/ShrinkPub.app "$ZIP"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP }}
+          generate_release_notes: true
+          body: |
+            ### Unsigned build
+
+            This app is **not** code-signed with a Developer ID or notarized, so macOS
+            Gatekeeper will warn on first launch. The app is ad-hoc signed only, which
+            is what lets it launch on Apple Silicon. To open it:
+
+            - **Right-click** (or Control-click) the app → **Open** → **Open**, or
+            - run `xattr -dr com.apple.quarantine /Applications/ShrinkPub.app`
