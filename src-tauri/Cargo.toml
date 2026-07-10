@@ -1,0 +1,26 @@
+[package]
+name = "shrinkpub-tauri"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "ShrinkPub desktop frontend"
+
+[lib]
+name = "shrinkpub_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+shrinkpub-core = { path = "../crates/shrinkpub-core" }
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+open = "5"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSColor", "NSColorSpace", "objc2-core-foundation"] }

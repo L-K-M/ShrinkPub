@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Cuts a release: bumps the version, commits, tags "v<version>", and with --push
-# pushes branch + tag — which triggers .github/workflows/release.yml to package the
-# universal macOS app with @electron/packager, ad-hoc sign it, zip it, and publish
-# the GitHub Release. The tag names the Release and the zip
-# (ShrinkPub-<tag>-darwin-universal.zip), but @electron/packager stamps the .app
-# bundle's version from the *committed* package.json — it does NOT derive it from the
-# tag — so the two must agree, or you'd ship "v1.3.0" containing an app that reports
-# 0.0.1. package.json is the only committed version location (no lockfile is
-# committed, and the bump must not create one).
+# pushes branch + tag — which triggers .github/workflows/release.yml to build the
+# Tauri bundles and publish the GitHub Release. IMPORTANT: tauri-action builds the
+# app from the *committed* version (it reads src-tauri/tauri.conf.json) and only
+# *names* the GitHub Release from the tag — it does NOT derive the bundle version
+# from the tag. So the committed version and the tag must agree, or you'd ship a
+# release named "v1.5.0" containing a 0.1.0 app. The engine bumps the version
+# everywhere it's declared (package.json + lock, tauri.conf.json, the workspace
+# Cargo.toml + Cargo.lock), updates the README, commits, and tags — so they always
+# match.
 #
-#   scripts/release.sh 1.3.0          # bump package.json + README, commit, tag v1.3.0
+#   scripts/release.sh 1.3.0          # bump version everywhere + README, commit, tag v1.3.0
 #   scripts/release.sh 1.3.0 --push   # …also push the commit + tag (CI then publishes)
 #   scripts/release.sh                # tag the current version as-is
 #
@@ -18,8 +19,9 @@
 set -euo pipefail
 
 export RELEASE_APP_NAME="ShrinkPub"
-export RELEASE_KIND="npm"
-export RELEASE_CI_NOTE="CI (release.yml) will now package + ad-hoc sign the universal macOS app and publish the GitHub Release for <tag>."
+export RELEASE_KIND="tauri"
+export RELEASE_CARGO_TOMLS="Cargo.toml"
+export RELEASE_CI_NOTE="CI (release.yml) will now build the Tauri bundles and publish the GitHub Release."
 export RELEASE_INVOKED_AS="scripts/release.sh"
 
 BIN="${LKM_RELEASE_BIN:-lkm-release}"

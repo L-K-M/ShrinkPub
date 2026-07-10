@@ -1,0 +1,20 @@
+mod commands;
+mod models;
+mod system_colors;
+mod updates;
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::inspect_paths,
+            commands::shrink_epub_file,
+            commands::get_system_colors,
+            updates::check_self_update,
+            updates::open_release_url,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

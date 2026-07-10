@@ -2,65 +2,165 @@ name: Release
 
 on:
   push:
-    tags: ['v*']        # e.g. v1.2.3
+    tags:
+      - 'v*.*.*'
 
+permissions:
+  contents: write # create the GitHub Release and upload assets
+
+# Never cancel a half-published release; queue re-tags instead.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write       # needed to create the GitHub Release
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  release:
-    name: Build & publish (unsigned)
-    runs-on: macos-latest
-
+  # ---------------------------------------------------------------------------
+  # Create a draft release that every build job uploads its artifacts into.
+  # ---------------------------------------------------------------------------
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Create draft release
+        id: create
+        uses: actions/github-script@v8
         with:
-          node-version: '20'
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `ShrinkPub ${tag}`,
+              draft: true,
+              prerelease: tag.includes('-'),
+              generate_release_notes: true,
+            });
+            return data.id;
 
-      # No lockfile is committed, so use `npm install`. @electron/packager
-      # reads the Electron version to bundle from the project's devDependencies
-      # (electron ^9.0.0), so a normal install is enough — no extra config file
-      # is added to the repo.
-      - name: Install dependencies
-        run: npm install
+  # ---------------------------------------------------------------------------
+  # Desktop bundles: macOS (Apple Silicon + Intel), Linux, and Windows.
+  # ---------------------------------------------------------------------------
+  build-desktop:
+    name: Desktop (${{ matrix.platform }} ${{ matrix.args }})
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust-targets: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: ''
+            rust-targets: ''
+          - platform: windows-latest
+            args: ''
+            rust-targets: ''
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
 
-      # Build a universal (Intel + Apple Silicon) macOS .app with no project
-      # config files. App name "ShrinkPub", output into dist/.
-      - name: Package macOS app (@electron/packager)
-        run: npx --yes @electron/packager . ShrinkPub --platform=darwin --arch=universal --out=dist --overwrite
-
-      # Ad-hoc sign (identity "-"): no certificate, keychain, or API key is
-      # required, but it IS required for the app to launch on Apple Silicon.
-      # This is not a Developer ID signature and the app is not notarized —
-      # Gatekeeper still warns on first launch.
-      - name: Ad-hoc codesign the app
-        run: codesign --force --deep --sign - dist/ShrinkPub-darwin-universal/ShrinkPub.app
-
-      - name: Package zip
+      - name: Install Tauri system dependencies (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
-          ZIP="ShrinkPub-${GITHUB_REF_NAME}-darwin-universal.zip"
-          ditto -c -k --keepParent dist/ShrinkPub-darwin-universal/ShrinkPub.app "$ZIP"
-          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Set up Node
+        uses: actions/setup-node@v5
         with:
-          files: ${{ env.ZIP }}
-          generate_release_notes: true
-          body: |
-            ### Unsigned build
+          node-version: 20
+          cache: npm
 
-            This app is **not** code-signed with a Developer ID or notarized, so macOS
-            Gatekeeper will warn on first launch. The app is ad-hoc signed only, which
-            is what lets it launch on Apple Silicon. To open it:
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
 
-            - **Right-click** (or Control-click) the app → **Open** → **Open**, or
-            - run `xattr -dr com.apple.quarantine /Applications/ShrinkPub.app`
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.platform }}-${{ matrix.args }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Referencing an unconfigured secret yields an empty string, and the
+      # Tauri bundler treats a set-but-empty APPLE_CERTIFICATE as "signing
+      # requested" — `security import` then fails the whole build. Export the
+      # signing variables only when they actually have values, so unsigned
+      # builds work without any secrets configured.
+      - name: Enable code signing when secrets are configured
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+                      APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
+                      TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              {
+                echo "${name}<<__SIGNING_SECRET_EOF__"
+                echo "$value"
+                echo "__SIGNING_SECRET_EOF__"
+              } >> "$GITHUB_ENV"
+            fi
+          done
+
+      - name: Build and upload Tauri bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }}
+
+  # ---------------------------------------------------------------------------
+  # Publish the release once every build job has finished successfully.
+  # ---------------------------------------------------------------------------
+  publish-release:
+    name: Publish release
+    needs: [create-release, build-desktop]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Mark release as published
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false,
+            });
