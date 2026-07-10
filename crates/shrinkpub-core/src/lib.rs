@@ -8,7 +8,10 @@
 //! - **The source file is never touched** and nothing is written anywhere
 //!   except the single output file — no extraction directory, no temp files.
 //!   Everything happens in memory, one entry at a time.
-//! - **A failed shrink leaves no trace**: the partial output is removed.
+//! - **A failed shrink leaves no trace**: the partial output is removed on
+//!   error, and because bytes stream into a `<name>.epub.part` sibling that is
+//!   only renamed into place on success, even a killed process can never leave
+//!   a half-written file masquerading as a finished book.
 //! - **Recompression can only help**: an image is replaced only when the
 //!   re-encoded version is strictly smaller; otherwise the original bytes are
 //!   copied through raw. Non-image entries are always copied bit-for-bit.
@@ -112,26 +115,36 @@ pub fn shrink_epub(
         })?;
     validate_epub(&mut archive, input)?;
 
-    let (output_path, out_file) = create_output(input)?;
+    let output = create_output(input)?;
     let result =
-        write_shrunk(&mut archive, out_file, quality, &mut progress).map_err(|source| {
+        write_shrunk(&mut archive, output.part_file, quality, &mut progress).map_err(|source| {
             // Never leave a half-written book behind.
-            let _ = fs::remove_file(&output_path);
+            let _ = fs::remove_file(&output.part_path);
             ShrinkError::Write {
-                path: output_path.clone(),
+                path: output.part_path.clone(),
                 source,
             }
         })?;
 
-    let output_bytes = fs::metadata(&output_path)
+    // Everything streamed into the `.part` sibling; the final name comes into
+    // existence only now, complete.
+    fs::rename(&output.part_path, &output.final_path).map_err(|source| {
+        let _ = fs::remove_file(&output.part_path);
+        ShrinkError::CreateOutput {
+            path: output.final_path.clone(),
+            source,
+        }
+    })?;
+
+    let output_bytes = fs::metadata(&output.final_path)
         .map_err(|source| ShrinkError::CreateOutput {
-            path: output_path.clone(),
+            path: output.final_path.clone(),
             source,
         })?
         .len();
 
     Ok(ShrinkReport {
-        output_path,
+        output_path: output.final_path,
         input_bytes,
         output_bytes,
         images_recompressed: result.images_recompressed,
@@ -159,9 +172,20 @@ fn validate_epub<R: Read + std::io::Seek>(
     })
 }
 
-/// Claim a collision-free sibling output file. `create_new` makes the
-/// probe-and-claim atomic, so concurrent shrinks cannot race each other.
-fn create_output(input: &Path) -> Result<(PathBuf, File), ShrinkError> {
+/// A claimed output slot: bytes stream into the already-created `part_file`
+/// at `part_path`, which is renamed to `final_path` once the shrink succeeds.
+struct OutputSlot {
+    final_path: PathBuf,
+    part_path: PathBuf,
+    part_file: File,
+}
+
+/// Claim a collision-free output slot next to the input. The `.part` file is
+/// claimed with `create_new`, which makes the probe atomic against concurrent
+/// shrinks; the final name is only ever created by the end-of-shrink rename.
+/// An existing `.part` (a concurrent run, or junk from a killed process) is
+/// never touched — the next numbered name is used instead.
+fn create_output(input: &Path) -> Result<OutputSlot, ShrinkError> {
     let dir = input.parent().unwrap_or_else(|| Path::new("."));
     let stem = input
         .file_stem()
@@ -170,18 +194,28 @@ fn create_output(input: &Path) -> Result<(PathBuf, File), ShrinkError> {
         .unwrap_or("book");
 
     for attempt in 1..10_000u32 {
-        let name = if attempt == 1 {
+        let final_name = if attempt == 1 {
             format!("{stem} (shrunk).epub")
         } else {
             format!("{stem} (shrunk {attempt}).epub")
         };
-        let candidate = dir.join(name);
-        match File::create_new(&candidate) {
-            Ok(file) => return Ok((candidate, file)),
+        let final_path = dir.join(&final_name);
+        if final_path.exists() {
+            continue;
+        }
+        let part_path = dir.join(format!("{final_name}.part"));
+        match File::create_new(&part_path) {
+            Ok(part_file) => {
+                return Ok(OutputSlot {
+                    final_path,
+                    part_path,
+                    part_file,
+                })
+            }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(source) => {
                 return Err(ShrinkError::CreateOutput {
-                    path: candidate,
+                    path: part_path,
                     source,
                 })
             }

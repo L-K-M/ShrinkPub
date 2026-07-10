@@ -15,6 +15,8 @@ sibling next to each original. The tool is deliberately boring and safe:
 - A recompressed image is only used when it is *strictly smaller*; anything the
   engine can't improve (or can't decode) passes through byte-for-byte.
 - No temp files, no extraction directories — the repack happens in memory.
+  Output streams into a `<name>.epub.part` sibling renamed into place on
+  success, so even a killed process never leaves a file that looks finished.
 - The output container is OCF-compliant (`mimetype` first, stored) even when
   the source wasn't.
 
@@ -43,12 +45,13 @@ src/                     SvelteKit (Svelte 5, static adapter, ssr=false) fronten
 
 Pipeline inside the engine (`crates/shrinkpub-core/src/lib.rs`):
 open zip → validate it's an EPUB (mimetype or META-INF/container.xml) →
-claim a collision-free `<stem> (shrunk[ N]).epub` sibling with `create_new` →
-write canonical `mimetype` first (stored) → stream every other entry: images
+claim a collision-free `<stem> (shrunk[ N]).epub` slot (the bytes go to a
+`.part` sibling claimed atomically with `create_new`) → write canonical
+`mimetype` first (stored) → stream every other entry: images
 (`.jpg/.jpeg/.png` by name) are decoded/re-encoded in memory
 (`image_codec.rs`) and used only if smaller, everything else is
-`raw_copy_file`d bit-for-bit → on any write error the partial output is
-deleted.
+`raw_copy_file`d bit-for-bit → rename the `.part` to the final name → on any
+write error the partial file is deleted instead.
 
 ## Core API (`shrinkpub-core`)
 

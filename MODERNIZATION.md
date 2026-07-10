@@ -142,7 +142,9 @@ src/                    Svelte 5 frontend: drop zone, quality picker, per-file r
   otherwise the original bytes are copied through verbatim (fixes §2.2). Non-image
   entries are copied bit-for-bit.
   The output writes `mimetype` first, stored, per OCF (fixes §2.4), and is named
-  `Book (shrunk).epub` (…`(shrunk 2)`, … on collision). EPUB detection is by
+  `Book (shrunk).epub` (…`(shrunk 2)`, … on collision) — written via a `.part`
+  sibling renamed on completion, so an interrupted run never leaves a file that
+  looks finished. EPUB detection is by
   container sniffing (zip magic + mimetype entry), not OS MIME guesses.
 - **Tauri shell.** One async `shrink_epub` command per file, spawned on a worker
   thread via `spawn_blocking`; progress/log lines stream to the frontend as events
@@ -177,9 +179,10 @@ the same graceful fallback the keep-smaller rule provides for size.
 - `scripts/release.sh` — stub over `lkm-release` with `RELEASE_KIND=tauri`
   (bumps `package.json` + lockfile, `tauri.conf.json`, workspace crate versions,
   `Cargo.lock`, README version marker; tags `vX.Y.Z`).
-- `scripts/build.sh` — local production build orchestrator in the family house
-  style (`npm install` → `npm run build` → `tauri build`), staging artifacts into
-  `dist/`.
+- Local builds go through the npm scripts, exactly like the sibling Tauri repos
+  (`npm run tauri build`; `npm run build` gates on `verify` = svelte-check +
+  `cargo test --workspace`). No `scripts/build.sh`: the shared `lkm-build`
+  engine deliberately has no tauri kind — bundles are CI's job.
 - `.github/workflows/ci.yml` — hardening trio (least-privilege permissions,
   ref-scoped concurrency, job timeouts); runs Rust fmt/clippy/tests and the
   frontend check/build on every push/PR.
@@ -188,7 +191,8 @@ the same graceful fallback the keep-smaller rule provides for size.
   `tauri-action` and publishes them to the GitHub Release
   (`softprops`-equivalent flow; pre-release tags marked as such).
 - `README.md` version marker, `CICD.md`, `AGENTS.md`, `media-sources/` with the
-  icon master + regeneration script, family `.gitignore`.
+  icon master (regeneration commands documented in the SVG header), family
+  `.gitignore`.
 
 ### 3.4 Explicitly dropped
 

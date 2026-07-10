@@ -312,6 +312,26 @@ fn collisions_get_numbered_suffixes() {
 }
 
 #[test]
+fn stale_part_files_are_left_alone_and_never_clobbered() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = standard_fixture(dir.path(), "Book.epub");
+    // Junk a killed process (or a concurrent run) might own.
+    let stale = dir.path().join("Book (shrunk).epub.part");
+    fs::write(&stale, "crash leftovers from a previous run").unwrap();
+
+    let report = shrink_epub(&input, Quality::Atrocious, |_| {}).unwrap();
+
+    // The slot whose .part exists is skipped, and the stale file is untouched.
+    assert_eq!(report.output_path, dir.path().join("Book (shrunk 2).epub"));
+    assert_eq!(
+        fs::read(&stale).unwrap(),
+        b"crash leftovers from a previous run"
+    );
+    // No new .part remains once the shrink succeeded.
+    assert!(!dir.path().join("Book (shrunk 2).epub.part").exists());
+}
+
+#[test]
 fn lower_tiers_produce_smaller_files() {
     let dir = tempfile::tempdir().unwrap();
     let mut sizes = Vec::new();
