@@ -11,7 +11,7 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "cargo test --workspace",
     "verify": "npm run check && npm run test",
-    "prepare": "husky",
+    "prepare": "svelte-kit sync && husky",
     "tauri": "tauri"
   },
   "license": "MIT",
