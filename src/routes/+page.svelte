@@ -7,6 +7,7 @@
     ArchiveFileIcon,
     Button,
     Dropdown,
+    ModalDialog,
     Notification,
     ProgressBar,
     TitleBar,
@@ -35,7 +36,8 @@
   const windowManager = new WindowManager();
 
   let jobs = $state<ShrinkJob[]>([]);
-  let quality = $state<QualityTier>('medium');
+  let defaultQuality = $state<QualityTier>('medium');
+  let settingsOpen = $state(false);
   let windowFocused = $state(true);
   let isWindowShaded = $state(false);
   let isDropActive = $state(false);
@@ -86,14 +88,14 @@
     try {
       const stored = localStorage.getItem(QUALITY_STORAGE_KEY);
       if (stored && QUALITY_OPTIONS.some((option) => option.value === stored)) {
-        quality = stored as QualityTier;
+        defaultQuality = stored as QualityTier;
       }
     } catch {
       // localStorage unavailable: keep the default.
     }
   }
 
-  function persistQuality(value: QualityTier) {
+  function persistDefaultQuality(value: string) {
     try {
       localStorage.setItem(QUALITY_STORAGE_KEY, value);
     } catch {
@@ -141,6 +143,8 @@
         path: info.path,
         name: info.name,
         sizeBytes: info.size_bytes,
+        quality: defaultQuality,
+        shrinkable: !info.is_dir && info.is_epub,
         status: 'working',
         progress: null,
         outcome: null,
@@ -166,7 +170,7 @@
     const job = jobs.find((candidate) => candidate.id === jobId);
     if (!job) return;
     try {
-      const outcome = await TauriService.shrinkEpubFile(job.id, job.path, quality);
+      const outcome = await TauriService.shrinkEpubFile(job.id, job.path, job.quality);
       job.outcome = outcome;
       job.status = 'done';
     } catch (error) {
@@ -176,6 +180,18 @@
     } finally {
       job.progress = null;
     }
+  }
+
+  /** A finished row's quality was changed: shrink that book again at the new
+   *  tier. The previous output stays on disk (nothing is ever deleted); the
+   *  row shows the newest result. */
+  function reshrink(job: ShrinkJob) {
+    if (!job.shrinkable || job.status === 'working') return;
+    job.status = 'working';
+    job.outcome = null;
+    job.error = null;
+    job.progress = null;
+    void runJob(job.id);
   }
 
   function removeJob(jobId: string) {
@@ -220,9 +236,6 @@
     void windowManager.startDragging();
   }
 
-  function handleQualityChange(value: string) {
-    persistQuality(value as QualityTier);
-  }
 </script>
 
 <div
@@ -274,6 +287,17 @@
                 {/if}
               </span>
               <span class="row-actions">
+                {#if job.shrinkable}
+                  <span class="row-quality">
+                    <Dropdown
+                      options={QUALITY_OPTIONS}
+                      bind:value={job.quality}
+                      disabled={job.status === 'working'}
+                      title="Quality for this book — changing it shrinks it again"
+                      onchange={() => reshrink(job)}
+                    />
+                  </span>
+                {/if}
                 {#if job.status === 'done'}
                   <Button onclick={() => revealOutput(job)}>Show</Button>
                 {/if}
@@ -294,14 +318,35 @@
     </main>
 
     <footer class="settings-bar">
-      <label class="quality-label" for="quality">Quality</label>
-      <span class="quality-select">
-        <Dropdown id="quality" options={QUALITY_OPTIONS} bind:value={quality} onchange={handleQualityChange} />
-      </span>
+      <Button onclick={() => (settingsOpen = true)}>Settings…</Button>
       {#if doneCount > 0 && totalSaved > 0}
         <span class="summary">Saved {formatBytes(totalSaved)} across {doneCount} {doneCount === 1 ? 'book' : 'books'}</span>
       {/if}
     </footer>
+  {/if}
+
+  {#if settingsOpen}
+    <ModalDialog width="380px" onclose={() => (settingsOpen = false)}>
+      <div class="settings-panel">
+        <h2 class="settings-title">Settings</h2>
+        <div class="s7-form-group">
+          <label for="default-quality">Default quality</label>
+          <Dropdown
+            id="default-quality"
+            options={QUALITY_OPTIONS}
+            bind:value={defaultQuality}
+            onchange={persistDefaultQuality}
+          />
+        </div>
+        <p class="settings-hint">
+          Newly added books start shrinking at this quality. Every book also has its own
+          selector in the list — changing it shrinks that book again at the new quality.
+        </p>
+        <div class="s7-actions">
+          <Button variant="primary" onclick={() => (settingsOpen = false)}>Done</Button>
+        </div>
+      </div>
+    </ModalDialog>
   {/if}
 
   <Notification notifications={$notifications} ondismiss={(id) => notifications.remove(id)} />
@@ -432,12 +477,23 @@
     background: var(--system7-color-paper, #fff);
   }
 
-  .quality-label {
-    font-weight: bold;
+  /* The library dropdown's 180px min-width is too wide for a list row. */
+  .row-quality :global(.sys7-dropdown) {
+    min-width: 120px;
   }
 
-  .quality-select {
-    min-width: 160px;
+  .settings-title {
+    margin: 0 0 12px;
+  }
+
+  .settings-hint {
+    margin: 12px 0 0;
+    font-size: 18px;
+    opacity: 0.75;
+  }
+
+  .settings-panel :global(.s7-actions) {
+    margin-top: 16px;
   }
 
   .summary {

@@ -48,6 +48,10 @@ export interface ShrinkJob {
   path: string;
   name: string;
   sizeBytes: number;
+  /** This book's own quality tier (seeded from the default setting). */
+  quality: QualityTier;
+  /** False for rejected drops (folders, non-EPUBs) — no quality dropdown. */
+  shrinkable: boolean;
   status: 'working' | 'done' | 'error';
   progress: ShrinkProgress | null;
   outcome: ShrinkOutcome | null;

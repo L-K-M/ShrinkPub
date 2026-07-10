@@ -7,8 +7,10 @@ the architecture shifts).
 ## Product Direction
 
 ShrinkPub makes EPUB files smaller. Drop `.epub` files onto the window (or pick
-them with the file dialog), choose a quality tier, get a `Book (shrunk).epub`
-sibling next to each original. The tool is deliberately boring and safe:
+them with the file dialog) and each gets a `Book (shrunk).epub` sibling next to
+the original. Books start at the default quality tier (set in the Settings
+panel); every row has its own quality selector, and changing it shrinks that
+book again at the new tier. The tool is deliberately boring and safe:
 
 - The original file is never modified or deleted.
 - An existing file is never overwritten (collision-suffixed output names).
@@ -92,7 +94,8 @@ Frontend structure: all UI in `src/routes/+page.svelte` (Svelte 5 runes);
 `src/lib/windowManager.ts` (custom title-bar window controls);
 `src/lib/updateChecker.ts` + `components/UpdateNotice.svelte` (update notice);
 `src/lib/util/` (notifications re-export, byte/percent formatting).
-localStorage keys are namespaced `shrinkpub.*` (currently `shrinkpub.quality`).
+localStorage keys are namespaced `shrinkpub.*` (currently `shrinkpub.quality` —
+the default tier applied to newly added books).
 
 ## system7-ui Integration
 
