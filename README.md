@@ -1,5 +1,8 @@
 # ShrinkPub
 
+> [!IMPORTANT]
+> LLM disclosure: This codebase was written with substantial help from large language models: AI coding agents working from the [`AGENTS.md`](AGENTS.md) brief in this repo.
+
 ShrinkPub is a Tauri desktop app that makes EPUB files smaller: drop your books
 into the window, pick a quality tier, and each one gets a recompressed
 `Book (shrunk).epub` sibling. Originals are never modified, images are only
