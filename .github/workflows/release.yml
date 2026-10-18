@@ -31,7 +31,7 @@ jobs:
 
       - name: Create draft release
         id: create
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
@@ -155,7 +155,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Mark release as published
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.repos.updateRelease({
